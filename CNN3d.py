@@ -109,49 +109,51 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from score import *
 
-    train_set = Nino3DDatasetTrain()
-    print('data loaded')
-    lr = 1e-3
-    epochs = 300
-    batch_size = 4
-    weight_decay = 1e-3
-    if t.cuda.is_available():
-        print("CUDA in use")
-        device = t.device('cuda')
-    else:
-        device = t.device('cpu')
+    # train_set = Nino3DDatasetTrain()
+    # print('data loaded')
+    # lr = 1e-3
+    # epochs = 300
+    # batch_size = 4
+    # weight_decay = 1e-3
+    # if t.cuda.is_available():
+    #     print("CUDA in use")
+    #     device = t.device('cuda')
+    # else:
+    #     device = t.device('cpu')
+    #
+    # model = _nino3d([2, 2, 2], 4, 1, 36).to(device)
+    # optimizer = t.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    # lr_scheduler = t.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    #
+    # criterion = t.nn.MSELoss()
+    # train_loss_list = []
+    # for epoch in range(epochs):
+    #     model.train()
+    #     data_loader = t.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
+    #     total_loss = 0.0
+    #     for idx, (src, tgt) in enumerate(data_loader):
+    #         start_time = time.time()
+    #         src, tgt = src.to(device), tgt.to(device)
+    #         pred = model(src)
+    #         optimizer.zero_grad()
+    #         loss = criterion(tgt.squeeze(), pred)
+    #         loss.backward()
+    #         optimizer.step()
+    #         total_loss += criterion(tgt.squeeze(1)[:, 12:], pred[:, 12:]).item() * src.size(0)
+    #
+    #         if (idx + 1) % 100 == 0:
+    #             print("Epoch {:d}: {:d}/{:d} \t train loss: {:.6f} \t lr: {:.6f} \t time cost: {:.3f}".format(
+    #                 epoch + 1, (idx + 1) * src.size(0), len(data_loader.dataset),
+    #                 loss.item(), optimizer.param_groups[0]['lr'], time.time() - start_time
+    #             ))
+    #     lr_scheduler.step(total_loss)
+    #     train_loss_list.append(total_loss / len(data_loader.dataset))
 
-    model = _nino3d([2, 2, 2], 4, 1, 36).to(device)
-    optimizer = t.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    lr_scheduler = t.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
-
-    criterion = t.nn.MSELoss()
-    train_loss_list = []
-    for epoch in range(epochs):
-        model.train()
-        data_loader = t.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True)
-        total_loss = 0.0
-        for idx, (src, tgt) in enumerate(data_loader):
-            start_time = time.time()
-            src, tgt = src.to(device), tgt.to(device)
-            pred = model(src)
-            optimizer.zero_grad()
-            loss = criterion(tgt.squeeze(), pred)
-            loss.backward()
-            optimizer.step()
-            total_loss += criterion(tgt.squeeze(1)[:, 12:], pred[:, 12:]).item() * src.size(0)
-
-            if (idx + 1) % 100 == 0:
-                print("Epoch {:d}: {:d}/{:d} \t train loss: {:.6f} \t lr: {:.6f} \t time cost: {:.3f}".format(
-                    epoch + 1, (idx + 1) * src.size(0), len(data_loader.dataset),
-                    loss.item(), optimizer.param_groups[0]['lr'], time.time() - start_time
-                ))
-        lr_scheduler.step(total_loss)
-        train_loss_list.append(total_loss / len(data_loader.dataset))
-
+    model = t.load("Conv3d.pth")
+    device = t.device('cuda')
     model.eval()
     test_set = Nino3DDatasetTest()
-    test_loader = t.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=False)
+    test_loader = t.utils.data.DataLoader(test_set, batch_size=128, shuffle=False)
     score = 0.0
     count = 0
     for src, tgt in test_loader:
@@ -159,9 +161,9 @@ if __name__ == '__main__':
         pred = model(src)
         score += get_score(tgt.squeeze(1).cpu().detach().numpy()[:, 12:], pred.cpu().detach().numpy()[:, 12:]) * len(tgt)
         count += tgt.shape[0]
-    t.save(model, "models/Conv3d.pth")
+    t.save(model, "Conv3d.pth")
     print(score/count)
 
     # plt.figure()
     # plt.plot(list(range(1, epochs + 1)), train_loss_list)
-    # plt.savefig('results/3d.png')
+    # plt.savefig('3d.png')
