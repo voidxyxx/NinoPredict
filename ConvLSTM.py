@@ -74,13 +74,11 @@ class ConvLSTM(t.nn.Module):
         cell_list = []
         for i in range(0, self.num_layers):
             cur_input_dim = self.input_dim if i == 0 else self.hidden_dim[i - 1]
-
             cell_list.append(ConvLSTMCell(input_size=(self.height, self.width),
                                           input_dim=cur_input_dim,
                                           hidden_dim=self.hidden_dim[i],
                                           kernel_size=self.kernel_size[i],
                                           bias=self.bias))
-
         self.cell_list = t.nn.ModuleList(cell_list)
 
     def forward(self, input, hidden_state=None):
@@ -192,8 +190,8 @@ if __name__ == '__main__':
     train_set = Nino3DDatasetTrain()
     print('data loaded')
     lr = 1e-3
-    epochs = 100
-    batch_size = 4
+    epochs = 3
+    batch_size = 16
     weight_decay = 1e-3
     if t.cuda.is_available():
         print("CUDA in use")
@@ -221,6 +219,8 @@ if __name__ == '__main__':
             start_time = time.time()
             src, tgt = src.to(device), tgt.to(device)
             src = src.permute(0, 2, 1, 3, 4)
+            print(src.shape)
+            exit(0)
             pred = model(src)
             optimizer.zero_grad()
             loss = criterion(tgt.squeeze(), pred)
@@ -238,7 +238,7 @@ if __name__ == '__main__':
 
     model.eval()
     test_set = Nino3DDatasetTest()
-    test_loader = t.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=False)
+    test_loader = t.utils.data.DataLoader(test_set, batch_size=100, shuffle=False)
     score = 0.0
     score1 = 0.0
     count = 0
@@ -248,10 +248,9 @@ if __name__ == '__main__':
         score += get_score(tgt.squeeze(1).cpu().detach().numpy()[:, 12:], pred.cpu().detach().numpy()[:, 12:]) * len(
             tgt)
         count += tgt.shape[0]
-    t.save(model, 'ConvLSTM.py')
     print(score / count)
 
     # plt.figure()
     # plt.plot(list(range(1, epochs + 1)), train_loss_list)
-    # plt.savefig('results/ConvLSTM.png')
+    # plt.savefig('ConvLSTM.png')
 
