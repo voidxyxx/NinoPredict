@@ -111,7 +111,7 @@ class ConvLSTM(t.nn.Module):
             output_inner = []
             for s in range(seq_len):
                 h, c = self.cell_list[layer_idx](cur_layer_input[:, s, :, :, :],
-                                                 prev_state=[h, c])
+                                                    prev_state=[h, c])
                 output_inner.append(h)
 
             layer_output = t.stack(output_inner, dim=1)
@@ -190,7 +190,7 @@ if __name__ == '__main__':
     train_set = Nino3DDatasetTrain()
     print('data loaded')
     lr = 1e-3
-    epochs = 3
+    epochs = 100
     batch_size = 16
     weight_decay = 1e-3
     if t.cuda.is_available():
@@ -199,9 +199,16 @@ if __name__ == '__main__':
     else:
         device = t.device('cpu')
 
+    # model = NinoConvLSTM((24, 72), 4, [64, 64], kernel_size=(3, 3),
+    #                      num_layers=2,
+    #                      out_dim=36,
+    #                      batch_first=True,
+    #                      bias=True,
+    #                      return_all_layers=False
+    #                      ).cuda()
     model = NinoConvLSTM((24, 72), 4, [64, 64], kernel_size=(3, 3),
                          num_layers=2,
-                         out_dim=36,
+                         out_dim=24,
                          batch_first=True,
                          bias=True,
                          return_all_layers=False
@@ -219,14 +226,14 @@ if __name__ == '__main__':
             start_time = time.time()
             src, tgt = src.to(device), tgt.to(device)
             src = src.permute(0, 2, 1, 3, 4)
-            print(src.shape)
-            exit(0)
             pred = model(src)
             optimizer.zero_grad()
-            loss = criterion(tgt.squeeze(), pred)
+            # loss = criterion(tgt.squeeze(), pred)
+            loss = criterion(tgt.squeeze()[:, 12:], pred)
             loss.backward()
             optimizer.step()
-            total_loss += criterion(tgt.squeeze(1)[:, 12:], pred[:, 12:]).item() * src.size(0)
+            # total_loss += criterion(tgt.squeeze(1)[:, 12:], pred[:, 12:]).item() * src.size(0)
+            total_loss += criterion(tgt.squeeze(1)[:, 12:], pred).item() * src.size(0)
 
             if (idx + 1) % 100 == 0:
                 print("Epoch {:d}: {:d}/{:d} \t train loss: {:.6f} \t lr: {:.6f} \t time cost: {:.3f}".format(
@@ -238,17 +245,20 @@ if __name__ == '__main__':
 
     model.eval()
     test_set = Nino3DDatasetTest()
-    test_loader = t.utils.data.DataLoader(test_set, batch_size=100, shuffle=False)
+    test_loader = t.utils.data.DataLoader(test_set, batch_size=128, shuffle=False)
     score = 0.0
-    score1 = 0.0
     count = 0
     for src, tgt in test_loader:
         src, tgt = src.to(device), tgt.to(device)
+        src = src.permute(0, 2, 1, 3, 4)
         pred = model(src)
-        score += get_score(tgt.squeeze(1).cpu().detach().numpy()[:, 12:], pred.cpu().detach().numpy()[:, 12:]) * len(
-            tgt)
+        # score += get_score(tgt.squeeze(1).cpu().detach().numpy()[:, 12:], pred.cpu().detach().numpy()[:, 12:]) * len(
+        #     tgt)
+        score += get_score(tgt.squeeze(1).cpu().detach().numpy()[:, 12:],
+                           pred.cpu().detach().numpy()) * len(tgt)
         count += tgt.shape[0]
     print(score / count)
+    t.save(model, "ConvLSTM_minmax.pth")
 
     # plt.figure()
     # plt.plot(list(range(1, epochs + 1)), train_loss_list)

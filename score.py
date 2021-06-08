@@ -18,6 +18,7 @@ def get_score(true, pred):
     score = (2 / 3) * accskill - rmse
     return score
 
+
 def get_score1(true, pred):
     pred_mean = np.mean(pred, 0)
     true_mean = np.mean(true, 0)
@@ -30,15 +31,13 @@ def get_score1(true, pred):
     pred_mean = np.array(pred_m)
     true_mean = np.array(true_mean)
     sigma = np.sqrt(np.sum((pred - pred_mean) ** 2, 0) * np.sum((true - true_mean) ** 2, 0))
-    print(sigma)
     cor = np.sum((pred - pred_mean) * (true - true_mean), 0) / (sigma + 1e-8)
-    print(cor)
     rmse = np.sqrt(np.sum((true - pred) ** 2.0) / N)
     RMSE = np.sum(rmse)
-    print(RMSE)
     accskill = 0
     for i in range(24):
         accskill += alpha[i] * np.log(i + 1) * cor[i]
     score = 2/3 * accskill - RMSE
     print(accskill)
+    print(RMSE)
     return score
